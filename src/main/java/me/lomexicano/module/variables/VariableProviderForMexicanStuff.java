@@ -1,13 +1,12 @@
 package me.lomexicano.module.variables;
 
 import me.lomexicano.ModuleInfo;
+import me.lomexicano.base.BaseVariableProvider;
 import net.eq2online.macros.scripting.api.APIVersion;
-import net.eq2online.macros.scripting.parser.ScriptContext;
-import net.eq2online.macros.scripting.variable.VariableCache;
 import net.minecraft.client.Minecraft;
 
 @APIVersion(ModuleInfo.API_VERSION)
-public class VariableProviderForMexicanStuff extends VariableCache {
+public class VariableProviderForMexicanStuff extends BaseVariableProvider {
 
     @Override
     public void updateVariables(boolean clock) {
@@ -32,15 +31,4 @@ public class VariableProviderForMexicanStuff extends VariableCache {
         this.storeVariable("CARDINALYAWF", cardinalYawF);
         this.storeVariable("PITCHF", pitchF);
     }
-
-    @Override
-    public Object getVariable(String variableName) {
-        return this.getCachedValue(variableName);
-    }
-
-    @Override
-    public void onInit() {
-        ScriptContext.MAIN.getCore().registerVariableProvider(this);
-    }
-
 }
