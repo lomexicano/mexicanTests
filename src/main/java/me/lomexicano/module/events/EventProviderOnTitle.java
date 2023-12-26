@@ -7,6 +7,7 @@ import net.eq2online.macros.scripting.api.APIVersion;
 import net.eq2online.macros.scripting.api.IMacroEvent;
 import net.eq2online.macros.scripting.api.IMacroEventDispatcher;
 import net.eq2online.macros.scripting.api.IMacroEventManager;
+import net.eq2online.macros.scripting.parser.ScriptContext;
 import net.eq2online.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiIngame;
@@ -19,15 +20,17 @@ public class EventProviderOnTitle extends BaseEventProvider implements IMacroEve
     private IMacroEvent onTitle;
     private final Map<String, Object> vars = new HashMap<>();
     private static final List<String> help;
-    public static int titlesTimer = 0;
-    public static int lastTitlesTimer = 0;
-    public static int titleFadeIn = 0;
-    public static int titleDisplayTime = 0;
-    public static int titleFadeOut = 0;
-    public static String displayedTitle = "";
-    public static String displayedSubTitle = "";
-    public static String lastDisplayedTitle = "";
-    public static String lastDisplayedSubTitle = "";
+    public static int titlesTimer;
+    public static int lastTitlesTimer;
+    public static int titleFadeIn;
+    public static int titleDisplayTime;
+    public static int titleFadeOut;
+    public static String displayedTitle;
+    public static String displayedSubTitle;
+    public static String lastDisplayedTitle;
+    public static String lastDisplayedSubTitle;
+
+    public static boolean varsWereLoaded = false;
 
     /* Executed once when the class is initialised. Used to create the help list. */
     static {
@@ -63,48 +66,47 @@ public class EventProviderOnTitle extends BaseEventProvider implements IMacroEve
 
     @Override
     public void onTick(IMacroEventManager manager, Minecraft minecraft) {
+        if (!varsWereLoaded && Minecraft.getMinecraft().ingameGUI != null) {
+            try {
+                GuiIngame myGUI = Minecraft.getMinecraft().ingameGUI;
 
-        try {
-            GuiIngame myGUI = Minecraft.getMinecraft().ingameGUI;
+                Field titlesTimerField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titlesTimer", "x", "field_175195_w"));
+                Field displayedTitleField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("displayedTitle", "y", "field_175201_x"));
+                Field displayedSubTitleField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("displayedSubTitle", "z", "field_175200_y"));
+                Field titleFadeInField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleFadeIn", "C", "field_175199_z"));
+                Field titleDisplayTimeField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleDisplayTime", "D", "field_175192_A"));
+                Field titleFadeOutField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleFadeOut", "E", "field_175193_B"));
 
-            Field titlesTimerField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titlesTimer", "x", "field_175195_w"));
-            Field displayedTitleField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("displayedTitle", "y", "field_175201_x"));
-            Field displayedSubTitleField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("displayedSubTitle", "z", "field_175200_y"));
-            Field titleFadeInField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleFadeIn", "C", "field_175199_z"));
-            Field titleDisplayTimeField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleDisplayTime", "D", "field_175192_A"));
-            Field titleFadeOutField = GuiIngame.class.getDeclaredField(ReflectionUtils.getFieldName("titleFadeOut", "E", "field_175193_B"));
+                titlesTimerField.setAccessible(true);
+                displayedTitleField.setAccessible(true);
+                displayedSubTitleField.setAccessible(true);
+                titleFadeInField.setAccessible(true);
+                titleDisplayTimeField.setAccessible(true);
+                titleFadeOutField.setAccessible(true);
 
-            titlesTimerField.setAccessible(true);
-            displayedTitleField.setAccessible(true);
-            displayedSubTitleField.setAccessible(true);
-            titleFadeInField.setAccessible(true);
-            titleDisplayTimeField.setAccessible(true);
-            titleFadeOutField.setAccessible(true);
+                titlesTimer = (int) titlesTimerField.get(myGUI);
+                displayedTitle = (String) displayedTitleField.get(myGUI);
+                displayedSubTitle = (String) displayedSubTitleField.get(myGUI);
+                titleFadeIn = (int) titleFadeInField.get(myGUI);
+                titleDisplayTime = (int) titleDisplayTimeField.get(myGUI);
+                titleFadeOut = (int) titleFadeOutField.get(myGUI);
 
-            titlesTimer = (int) titlesTimerField.get(myGUI);
-            displayedTitle = (String) displayedTitleField.get(myGUI);
-            displayedSubTitle = (String) displayedSubTitleField.get(myGUI);
-            titleFadeIn = (int) titleFadeInField.get(myGUI);
-            titleDisplayTime = (int) titleDisplayTimeField.get(myGUI);
-            titleFadeOut = (int) titleFadeOutField.get(myGUI);
+                varsWereLoaded = true;
+            } catch (Exception ignore) {
+            }
+        } else if (varsWereLoaded) {
 
-        } catch (Exception ignore) {
-            titlesTimer = 0;
-            displayedTitle = "";
-            displayedSubTitle = "";
+            if( ((!displayedTitle.equals(""))||(!displayedSubTitle.equals(""))) &&
+                    ((!displayedTitle.equals(lastDisplayedTitle)||(!displayedSubTitle.equals(lastDisplayedSubTitle))) ||
+                            ((titlesTimer > lastTitlesTimer)))) {
+
+                lastDisplayedTitle = displayedTitle;
+                lastDisplayedSubTitle = displayedSubTitle;
+                manager.sendEvent(this.onTitle, displayedTitle, displayedSubTitle, String.valueOf(titleFadeIn), String.valueOf(titleDisplayTime), String.valueOf(titleFadeOut), String.valueOf(titlesTimer));
+            }
+            lastTitlesTimer = titlesTimer;
         }
-
-        if( ((!displayedTitle.equals(""))||(!displayedSubTitle.equals(""))) &&
-                ((!displayedTitle.equals(lastDisplayedTitle)||(!displayedSubTitle.equals(lastDisplayedSubTitle))) ||
-                        ((titlesTimer > lastTitlesTimer)))) {
-
-            lastDisplayedTitle = displayedTitle;
-            lastDisplayedSubTitle = displayedSubTitle;
-            manager.sendEvent(this.onTitle, displayedTitle, displayedSubTitle, String.valueOf(titleFadeIn), String.valueOf(titleDisplayTime), String.valueOf(titleFadeOut), String.valueOf(titlesTimer));
-        }
-        lastTitlesTimer = titlesTimer;
     }
-
     @Override
     public IMacroEventDispatcher getDispatcher() {
         return this;
@@ -123,5 +125,6 @@ public class EventProviderOnTitle extends BaseEventProvider implements IMacroEve
 
     public EventProviderOnTitle() {}
     public EventProviderOnTitle(IMacroEvent e) {}
+
 
 }
